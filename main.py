@@ -8,7 +8,7 @@ jst = timezone(timedelta(hours=9), 'JST')
 configData = msmod.readConfigIni('MakeShop.ini')
 
 # 検索条件設定
-searchInfo = {'deliveryStatus':'Y','sortOrder':'ASC','page':1,'limit':2}
+searchInfo = msmod.readSearchOrderConfigIni('MakeShop.ini')
 
 # 注文履歴を検索
 orderJsonList = msmod.searchOrder(configData,searchInfo)
