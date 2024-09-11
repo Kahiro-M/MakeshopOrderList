@@ -47,16 +47,52 @@ def readSearchOrderConfigIni(filePath='MakeShop.ini'):
         and config.has_option('SearchOrder','SORT_ORDER')
         and config.has_option('SearchOrder','PAGE')
         and config.has_option('SearchOrder','LIMIT')
+        and config.has_option('SearchOrder','PRODUCT_NAME')
     ):
         ConfigData = {
             'DELIVERY_STATUS' : config.get('SearchOrder','DELIVERY_STATUS'),
             'SORT_ORDER'      : config.get('SearchOrder','SORT_ORDER'),
             'PAGE'            : int(config.get('SearchOrder','PAGE')),
             'LIMIT'           : int(config.get('SearchOrder','LIMIT')),
+            'PRODUCT_NAME'    : config.get('SearchOrder','PRODUCT_NAME'),
+        }
+        return ConfigData
+    elif(config.has_option('SearchOrder','DELIVERY_STATUS')
+        and config.has_option('SearchOrder','SORT_ORDER')
+        and config.has_option('SearchOrder','PAGE')
+        and config.has_option('SearchOrder','LIMIT')
+    ):
+        ConfigData = {
+            'DELIVERY_STATUS' : config.get('SearchOrder','DELIVERY_STATUS'),
+            'SORT_ORDER'      : config.get('SearchOrder','SORT_ORDER'),
+            'PAGE'            : int(config.get('SearchOrder','PAGE')),
+            'LIMIT'           : int(config.get('SearchOrder','LIMIT')),
+            'PRODUCT_NAME'    : '.*',
         }
         return ConfigData
     else:
         return {'type':'error','hasOptions':config.options('SearchOrder')}
+
+
+
+# iniファイルから検索条件設定を読み込む
+def readParamConfigIni(optionName,filePath='MakeShop.ini'):
+    import configparser
+
+    #ConfigParserオブジェクトを生成
+    config = configparser.ConfigParser()
+
+    #設定ファイル読み込み
+    config.read(filePath,encoding='utf8')
+
+    #設定情報取得
+    if(config.has_option(optionName,'PARAM')):
+        ConfigData = {
+            'PARAM' : config.get(optionName,'PARAM'),
+        }
+        return eval(ConfigData['PARAM'])
+    else:
+        return {'type':'error','hasOptions':config.options(optionName)}
 
 
 
@@ -87,9 +123,27 @@ def searchOrder(config,searchInfo):
     if(searchInfo['LIMIT'] > 1000 or searchInfo['LIMIT'] < 1):
         searchInfo['LIMIT'] = 1000
     
+    basketInfos = [
+        'productName', # 商品名
+        'price', # 商品価格
+        'amount', # 個数
+        'productCode', # 商品コード
+    ]
+    basketInfosStr = 'basketInfos {'+' '.join(basketInfos)+'}'
+    deliveryInfosStr = 'deliveryInfos {'+basketInfosStr+'}'
+
+    searchedOrderInfo = [
+        'memberId', # 会員ID(注文番号)
+        'orderDate', # 日付
+        'sumPrice', # 支払金額
+        'senderPrefecture', # 注文者の住所（都道府県）
+        'displayOrderNumber', # 注文番号
+    ]
+    searchedOrderInfoStr = ' '.join(searchedOrderInfo)
+
     # APIのRequest作成
     json_data = {
-        'query': 'query searchOrder($input: SearchOrderRequest!) {searchOrder(input: $input) {searchedCount page orders {displayOrderNumber orderDate memberId sumPrice deliveryInfos {basketInfos {productName price}}}}}',
+        'query': 'query searchOrder($input: SearchOrderRequest!) {searchOrder(input: $input) {searchedCount page orders {'+searchedOrderInfoStr+' '+deliveryInfosStr+'}}}',
         'variables': {
             'input': {
                 'deliveryStatus':searchInfo['DELIVERY_STATUS'],
