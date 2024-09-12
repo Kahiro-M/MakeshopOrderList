@@ -24,13 +24,14 @@ with open(fileName, 'w', newline='') as f:
     writer = csv.writer(f)
     writer.writerow([
         '注文番号',
-        '会員ID',
-        '注文日時',
-        '注文年月',
+        '会員ID(注文番号)',
+        '日付',
         '商品名',
-        '商品価格',
-        '個数',
         '商品コード',
+        '個数',
+        '商品価格',
+        '支払金額',
+        '注文年月',
         '実行日時',
         ])
     
@@ -40,7 +41,7 @@ with open(fileName, 'w', newline='') as f:
             print('-----------------------------')
             print('注文番号 : ' + orderInfo['displayOrderNumber'])
             print('会員ID   : ' + orderInfo['memberId'])
-            print('注文日時 : ' + orderInfo['orderDate'])
+            print('日付     : ' + orderInfo['orderDate'])
             datetimeStr = orderInfo['orderDate']
             dt = datetime.strptime(datetimeStr,'%Y-%m-%d %H:%M:%S')
             orderYearMonth = dt.astimezone(jst).strftime('%Y%m')
@@ -59,12 +60,13 @@ with open(fileName, 'w', newline='') as f:
                     writer.writerow([
                         orderInfo['displayOrderNumber'],  # '注文番号',
                         orderInfo['memberId'],            # '会員ID',
-                        orderInfo['orderDate'],           # '注文日時',
-                        orderYearMonth,                   # '注文年月',
+                        orderInfo['orderDate'],           # '日付',
                         basketInfo['productName'],        # '商品名',
-                        basketInfo['price'],              # '商品価格',
-                        basketInfo['amount'],             # '個数',
                         basketInfo['productCode'],        # '商品コード',
+                        basketInfo['amount'],             # '個数',
+                        basketInfo['price'],              # '商品価格',
+                        orderInfo['sumPrice'],            # '支払金額',
+                        orderYearMonth,                   # '注文年月',
                         mkdir_datetime.get_today_date('-')+' '+mkdir_datetime.get_now_time(),        # '実行日時',
                         ])
             print('注文合計金額 : ' + '{:,}'.format(sumPrice))

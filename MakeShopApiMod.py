@@ -42,36 +42,45 @@ def readSearchOrderConfigIni(filePath='MakeShop.ini'):
     #設定ファイル読み込み
     config.read(filePath,encoding='utf8')
 
+    ConfigData = {}
+
     #設定情報取得
-    if(config.has_option('SearchOrder','DELIVERY_STATUS')
-        and config.has_option('SearchOrder','SORT_ORDER')
-        and config.has_option('SearchOrder','PAGE')
-        and config.has_option('SearchOrder','LIMIT')
-        and config.has_option('SearchOrder','PRODUCT_NAME')
-    ):
-        ConfigData = {
-            'DELIVERY_STATUS' : config.get('SearchOrder','DELIVERY_STATUS'),
-            'SORT_ORDER'      : config.get('SearchOrder','SORT_ORDER'),
-            'PAGE'            : int(config.get('SearchOrder','PAGE')),
-            'LIMIT'           : int(config.get('SearchOrder','LIMIT')),
-            'PRODUCT_NAME'    : config.get('SearchOrder','PRODUCT_NAME'),
-        }
-        return ConfigData
-    elif(config.has_option('SearchOrder','DELIVERY_STATUS')
-        and config.has_option('SearchOrder','SORT_ORDER')
-        and config.has_option('SearchOrder','PAGE')
-        and config.has_option('SearchOrder','LIMIT')
-    ):
-        ConfigData = {
-            'DELIVERY_STATUS' : config.get('SearchOrder','DELIVERY_STATUS'),
-            'SORT_ORDER'      : config.get('SearchOrder','SORT_ORDER'),
-            'PAGE'            : int(config.get('SearchOrder','PAGE')),
-            'LIMIT'           : int(config.get('SearchOrder','LIMIT')),
-            'PRODUCT_NAME'    : '.*',
-        }
-        return ConfigData
+    if(config.has_option('SearchOrder','DELIVERY_STATUS')):
+        ConfigData['DELIVERY_STATUS'] = config.get('SearchOrder','DELIVERY_STATUS')
     else:
-        return {'type':'error','hasOptions':config.options('SearchOrder')}
+        ConfigData['DELIVERY_STATUS'] = 'Y'
+
+    if(config.has_option('SearchOrder','SORT_ORDER')):
+        ConfigData['SORT_ORDER'] = config.get('SearchOrder','SORT_ORDER')
+    else:
+        ConfigData['SORT_ORDER'] = 'ASC'
+
+    if(config.has_option('SearchOrder','PAGE')):
+        ConfigData['PAGE'] = int(config.get('SearchOrder','PAGE'))
+    else:
+        ConfigData['PAGE'] = 1
+
+    if(config.has_option('SearchOrder','LIMIT')):
+        ConfigData['LIMIT'] = int(config.get('SearchOrder','LIMIT'))
+    else:
+        ConfigData['LIMIT'] = 1000
+
+    if(config.has_option('SearchOrder','PRODUCT_NAME')):
+        ConfigData['PRODUCT_NAME'] = config.get('SearchOrder','PRODUCT_NAME')
+    else:
+        ConfigData['PRODUCT_NAME'] = '.*'
+
+    if(config.has_option('SearchOrder','START_DATE')):
+        ConfigData['START_DATE'] = config.get('SearchOrder','START_DATE')
+    else:
+        ConfigData['START_DATE'] = '1970-01-01 00:00:00'
+
+    if(config.has_option('SearchOrder','END_DATE')):
+        ConfigData['END_DATE'] = config.get('SearchOrder','END_DATE')
+    else:
+        ConfigData['END_DATE'] = '9999-12-31 23:59:59'
+
+    return ConfigData
 
 
 
@@ -102,7 +111,8 @@ def searchOrder(config,searchInfo):
     import json
     import time
     import math
-    
+    from datetime import datetime, timedelta
+
     # UNIX時間
     ut = time.time()
 
@@ -122,6 +132,17 @@ def searchOrder(config,searchInfo):
         searchInfo['PAGE'] = 1
     if(searchInfo['LIMIT'] > 1000 or searchInfo['LIMIT'] < 1):
         searchInfo['LIMIT'] = 1000
+    try:
+        date_object = datetime.strptime(searchInfo['START_DATE'], "%Y-%m-%d %H:%M:%S")
+        searchInfo['START_DATE'] = date_object.strftime('%Y%m%d%H%M%S')
+    except ValueError:
+        searchInfo['START_DATE'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    try:
+        date_object = datetime.strptime(searchInfo['END_DATE'], "%Y-%m-%d %H:%M:%S")
+        searchInfo['END_DATE'] = date_object.strftime('%Y%m%d%H%M%S')
+    except ValueError:
+        searchInfo['END_DATE'] = (datetime.now()-timedelta(days=365)).strftime('%Y-%m-%d %H:%M:%S')
+        
     
     basketInfos = [
         'productName', # 商品名
@@ -146,6 +167,8 @@ def searchOrder(config,searchInfo):
         'query': 'query searchOrder($input: SearchOrderRequest!) {searchOrder(input: $input) {searchedCount page orders {'+searchedOrderInfoStr+' '+deliveryInfosStr+'}}}',
         'variables': {
             'input': {
+                'startOrderDate':searchInfo['START_DATE'],
+                'endOrderDate':searchInfo['END_DATE'],
                 'deliveryStatus':searchInfo['DELIVERY_STATUS'],
                 'sortOrder':searchInfo['SORT_ORDER'],
                 'page':searchInfo['PAGE'],
@@ -167,6 +190,8 @@ def searchOrder(config,searchInfo):
             'query': 'query searchOrder($input: SearchOrderRequest!) {searchOrder(input: $input) {searchedCount page orders {displayOrderNumber orderDate memberId sumPrice deliveryInfos {basketInfos {productName price}}}}}',
             'variables': {
                 'input': {
+                    'startOrderDate':searchInfo['START_DATE'],
+                    'endOrderDate':searchInfo['END_DATE'],
                     'deliveryStatus':searchInfo['DELIVERY_STATUS'],
                     'sortOrder':searchInfo['SORT_ORDER'],
                     'page':searchInfo['PAGE']+i,
