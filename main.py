@@ -67,7 +67,10 @@ with open(fileName, 'w', newline='') as f:
             i = 1
             for basketInfo in orderInfo['deliveryInfos'][0]['basketInfos']:
                 # iniで設定された検索条件の商品名（正規表現）に合致する注文情報だけ抽出
-                if(len(re.findall(searchInfo['PRODUCT_NAME'],basketInfo['productName']))>0):
+                if(
+                    len(re.findall(searchInfo['PRODUCT_NAME'],basketInfo['productName']))>0
+                    and len(re.findall(searchInfo['GROUP_NAME'],groupName))>0
+                ):
                     print('  商品名' + str(i))
                     print('    商品名     : ' + basketInfo.get('productName',''))
                     print('    商品価格   : ' + '{:,}'.format(basketInfo.get('price',0)))

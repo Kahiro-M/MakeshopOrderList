@@ -144,6 +144,11 @@ def readSearchOrderConfigIni(filePath='MakeShop.ini'):
     else:
         ConfigData['END_DATE'] = '9999-12-31 23:59:59'
 
+    if(config.has_option('SearchOrder','GROUP_NAME')):
+        ConfigData['GROUP_NAME'] = config.get('SearchOrder','GROUP_NAME')
+    else:
+        ConfigData['GROUP_NAME'] = '.*'
+
     return ConfigData
 
 
