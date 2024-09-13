@@ -258,7 +258,7 @@ def searchOrder(config,searchInfo):
     i = 1
     while(count > searchInfo['LIMIT']):
         json_data = {
-            'query': 'query searchOrder($input: SearchOrderRequest!){searchOrder(input: $input){searchedCount page orders{displayOrderNumber orderDate memberId sumPrice deliveryInfos{basketInfos{productName price}}}}}',
+            'query': 'query searchOrder($input: SearchOrderRequest!) {searchOrder(input: $input) {searchedCount page orders {'+searchedOrderInfoStr+' '+deliveryInfosStr+'}}}',
             'variables': {
                 'input': {
                     'startOrderDate':searchInfo['START_DATE'],       # 注文日 検索開始日時
