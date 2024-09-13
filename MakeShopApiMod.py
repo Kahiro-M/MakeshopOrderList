@@ -2,7 +2,71 @@
 # MakeShop REST API モジュール 
 # -------------------------------------------------- #   
 
+# Makeshopの配送状態対応表
+# https://developers.makeshop.jp/api/graphql/index.html#definition-SearchOrderRequest
+def getDeliveryStatusList():
+    return {
+        'N':'未処理',
+        'Y':'配送',
+        'C':'キャンセル',
+        'R':'返送',
+    }
 
+# Makeshopの都道府県コード対応表
+# https://developers.makeshop.jp/api/graphql/index.html#introduction-item-2
+def getPrefNameList():
+    return {
+        1:'北海道',
+        2:'青森県',
+        3:'岩手県',
+        4:'宮城県',
+        5:'秋田県',
+        6:'山形県',
+        7:'福島県',
+        8:'茨城県',
+        9:'栃木県',
+        10:'群馬県',
+        11:'埼玉県',
+        12:'千葉県',
+        13:'東京都',
+        14:'東京都',
+        15:'神奈川県',
+        16:'新潟県',
+        17:'富山県',
+        18:'石川県',
+        19:'福井県',
+        20:'山梨県',
+        21:'長野県',
+        22:'岐阜県',
+        23:'静岡県',
+        24:'愛知県',
+        25:'三重県',
+        26:'滋賀県',
+        27:'京都府',
+        28:'大阪府',
+        29:'兵庫県',
+        30:'奈良県',
+        31:'和歌山県',
+        32:'鳥取県',
+        33:'島根県',
+        34:'岡山県',
+        35:'広島県',
+        36:'山口県',
+        37:'徳島県',
+        38:'香川県',
+        39:'愛媛県',
+        40:'高知県',
+        41:'福岡県',
+        42:'佐賀県',
+        43:'長崎県',
+        44:'熊本県',
+        45:'大分県',
+        46:'宮崎県',
+        47:'鹿児島県',
+        48:'沖縄県',
+        49:'離島部',
+        50:'海外',
+    }
 
 # iniファイルから設定を読み込む
 def readConfigIni(filePath='MakeShop.ini'):
@@ -105,7 +169,7 @@ def readParamConfigIni(optionName,filePath='MakeShop.ini'):
 
 
 
-# アーカイブされた取引先情報を取得
+# 注文情報を取得
 def searchOrder(config,searchInfo):
     import requests
     import json
@@ -124,7 +188,7 @@ def searchOrder(config,searchInfo):
     }
 
     # 検索条件の正規化
-    if(searchInfo['DELIVERY_STATUS'] not in ['N','Y','C','R']):
+    if(searchInfo['DELIVERY_STATUS'] not in [list(getDeliveryStatusList())]):
         searchInfo['DELIVERY_STATUS'] = 'Y'
     if(searchInfo['SORT_ORDER'] not in ['ASC','DESC']):
         searchInfo['SORT_ORDER'] = 'ASC'
@@ -143,36 +207,38 @@ def searchOrder(config,searchInfo):
     except ValueError:
         searchInfo['END_DATE'] = (datetime.now()-timedelta(days=365)).strftime('%Y-%m-%d %H:%M:%S')
         
-    
+    # https://developers.makeshop.jp/api/graphql/index.html#definition-BasketInfo
     basketInfos = [
         'productName', # 商品名
-        'price', # 商品価格
-        'amount', # 個数
+        'price',       # 商品価格
+        'amount',      # 個数
         'productCode', # 商品コード
     ]
     basketInfosStr = 'basketInfos {'+' '.join(basketInfos)+'}'
     deliveryInfosStr = 'deliveryInfos {'+basketInfosStr+'}'
 
+    # https://developers.makeshop.jp/api/graphql/index.html#definition-SearchedOrder
     searchedOrderInfo = [
-        'memberId', # 会員ID(注文番号)
-        'orderDate', # 日付
-        'sumPrice', # 支払金額
-        'senderPrefecture', # 注文者の住所（都道府県）
+        'memberId',           # 会員ID(注文番号)
+        'orderDate',          # 日付
+        'sumPrice',           # 支払金額
+        'senderPrefecture',   # 注文者の住所（都道府県）
         'displayOrderNumber', # 注文番号
     ]
     searchedOrderInfoStr = ' '.join(searchedOrderInfo)
 
     # APIのRequest作成
+    # https://developers.makeshop.jp/api/graphql/index.html#query-searchOrder
     json_data = {
         'query': 'query searchOrder($input: SearchOrderRequest!) {searchOrder(input: $input) {searchedCount page orders {'+searchedOrderInfoStr+' '+deliveryInfosStr+'}}}',
         'variables': {
             'input': {
-                'startOrderDate':searchInfo['START_DATE'],
-                'endOrderDate':searchInfo['END_DATE'],
-                'deliveryStatus':searchInfo['DELIVERY_STATUS'],
-                'sortOrder':searchInfo['SORT_ORDER'],
-                'page':searchInfo['PAGE'],
-                'limit':searchInfo['LIMIT'],
+                'startOrderDate':searchInfo['START_DATE'],       # 注文日 検索開始日時
+                'endOrderDate':searchInfo['END_DATE'],           # 注文日 検索終了日時
+                'deliveryStatus':searchInfo['DELIVERY_STATUS'],  # 配送状態
+                'sortOrder':searchInfo['SORT_ORDER'],            # ソート順
+                'page':searchInfo['PAGE'],                       # ページ番号
+                'limit':searchInfo['LIMIT'],                     # 上限数
             },
         },
     }
@@ -187,18 +253,88 @@ def searchOrder(config,searchInfo):
     i = 1
     while(count > searchInfo['LIMIT']):
         json_data = {
-            'query': 'query searchOrder($input: SearchOrderRequest!) {searchOrder(input: $input) {searchedCount page orders {displayOrderNumber orderDate memberId sumPrice deliveryInfos {basketInfos {productName price}}}}}',
+            'query': 'query searchOrder($input: SearchOrderRequest!){searchOrder(input: $input){searchedCount page orders{displayOrderNumber orderDate memberId sumPrice deliveryInfos{basketInfos{productName price}}}}}',
             'variables': {
                 'input': {
-                    'startOrderDate':searchInfo['START_DATE'],
-                    'endOrderDate':searchInfo['END_DATE'],
-                    'deliveryStatus':searchInfo['DELIVERY_STATUS'],
-                    'sortOrder':searchInfo['SORT_ORDER'],
-                    'page':searchInfo['PAGE']+i,
-                    'limit':searchInfo['LIMIT'],
+                    'startOrderDate':searchInfo['START_DATE'],       # 注文日 検索開始日時
+                    'endOrderDate':searchInfo['END_DATE'],           # 注文日 検索終了日時
+                    'deliveryStatus':searchInfo['DELIVERY_STATUS'],  # 配送状態
+                    'sortOrder':searchInfo['SORT_ORDER'],            # ソート順
+                    'page':searchInfo['PAGE']+i,                     # ページ番号
+                    'limit':searchInfo['LIMIT'],                     # 上限数
                 },
             },
         }
+        response = requests.post(config['END_POINT'],headers=header_data,json=json_data)
+        res.append(response.json())
+        count -= searchInfo['LIMIT']
+        i += 1
+
+    return res
+
+
+
+# 会員情報を取得
+def searchMember(config,searchInfo):
+    import requests
+    import json
+    import time
+    import math
+    # from datetime import datetime, timedelta
+
+    # UNIX時間
+    ut = time.time()
+
+    header_data = {
+        'authorization': 'Bearer '+config['TOKEN'],
+        'content-type': 'application/json',
+        'x-api-key': config['API_KEY'],
+        'x-timestamp': str(math.floor(ut)),
+    }
+
+    # 検索条件の正規化
+
+    # https://developers.makeshop.jp/api/graphql/index.html#definition-MemberInfo
+    searchedMemberInfo = [
+        'groupId',     # グループID
+        'groupName',   # グループ名
+        'memberId',    # 会員ID
+        'name',        # 会員氏名
+        'haddress1',   # 都道府県コード(自宅)
+    ]
+    searchedMemberInfoStr = ' '.join(searchedMemberInfo)
+
+    # APIのRequest作成
+    # https://developers.makeshop.jp/api/graphql/index.html#query-searchMember
+    json_data = {
+        'query':'query searchMember($input:SearchMemberRequest!){searchMember(input:$input){searchedCount members{'+searchedMemberInfoStr+'}}}',
+        'variables': {
+            'input': {
+                'page':searchInfo['PAGE'],   # ページ番号
+                'limit':searchInfo['LIMIT'], # 上限数
+            },
+        },
+    }
+
+    # 結果の保存
+    response = requests.post(config['END_POINT'],headers=header_data,json=json_data)
+    res = []
+    res.append(response.json())
+    
+    # 検索結果が2ページ以上の場合
+    count = res[0]['data']['searchMember']['searchedCount']
+    i = 1
+    while(count > searchInfo['LIMIT']):
+        json_data = {
+            'query':'query searchMember($input:SearchMemberRequest!){searchMember(input:$input){searchedCount members{'+searchedMemberInfoStr+'}}}',
+            'variables': {
+                'input': {
+                    'page':searchInfo['PAGE']+i, # ページ番号
+                    'limit':searchInfo['LIMIT'], # 上限数
+                },
+            },
+        }
+
         response = requests.post(config['END_POINT'],headers=header_data,json=json_data)
         res.append(response.json())
         count -= searchInfo['LIMIT']
