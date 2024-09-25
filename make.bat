@@ -1,1 +1,1 @@
-pyinstaller --onefile --icon=icon.ico main.py
+pyinstaller --onefile --icon=icon.ico main.py -n MakeshopOrderList
