@@ -53,7 +53,12 @@ with open(fileName, 'w', newline='') as f:
             sumPrice = 0
             print('-----------------------------')
             print('注文番号 : ' + orderInfo.get('displayOrderNumber',''))
-            print('会員ID   : ' + orderInfo.get('memberId',''))
+            # 会員ID 4~12桁の英数　非会員は「X+6桁数字+氏名」だが「X+6桁数字」だけ抽出する
+            if(len(re.findall('^(X\d{6}).*',orderInfo.get('memberId',''))) > 0):
+                memberId = re.findall('^(X\d{6}).*',orderInfo.get('memberId',''))[0]
+            else:
+                memberId = orderInfo.get('memberId','')
+            print('会員ID   : ' + memberId)
             print('都道府県 : ' + orderInfo.get('senderPrefecture','登録なし'))
             print('日付     : ' + orderInfo.get('orderDate',''))
             datetimeStr = orderInfo.get('orderDate','')
@@ -80,7 +85,7 @@ with open(fileName, 'w', newline='') as f:
                     sumPrice += basketInfo.get('price',0) * basketInfo.get('amount',0)
                     writer.writerow([
                         orderInfo.get('displayOrderNumber',''),       # '注文番号',
-                        orderInfo.get('memberId',''),                 # '会員ID',
+                        memberId,                                     # '会員ID',
                         orderInfo.get('senderPrefecture','登録なし'), # '都道府県',
                         orderInfo.get('orderDate',''),                # '日付',
                         basketInfo.get('productName',''),             # '商品名',
